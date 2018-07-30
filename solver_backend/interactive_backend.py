@@ -303,7 +303,7 @@ class TrainRandomForestFromAction(ActionHandler):
 
 class SolverServer(object):
 
-    def __init__(self, address, action_handler):
+    def __init__(self, address, solution_address, solution_publisher_address, action_handler):
 
         super(SolverServer, self).__init__()
 
@@ -379,22 +379,33 @@ class SolverServer(object):
     def _solve(self, timeout):
         while self.is_running():
             self.logger.debug('Waiting for request at {}'.format(self.address))
-            request = self.socket.recv_string()
-            length  = len(request)
-            self.logger.debug('Received request of length {}: `{}`.'.format(length, request))
-            with self.lock:
+            endpoint = self.socket.recv_string()
 
-                if length > 0:
-                    json_object = json.loads(request)
-                    version     = json_object['version'] if 'version' in json_object else '0'
-                    actions     = Action.from_json_array(json.dumps(json_object['actions']))
-                    self.logger.debug("Actions as json object: %s", json_object)
-                    self.logger.debug("Handling actions: %s", actions)
-                    self.action_handler.submit_actions(version, actions)
-                    # solution, self.graph, self.costs = self.action_handler.get_solution(self.graph, self.costs, actions, self.current_solution)
-                # print('sending message!')
-                self.logger.debug('Responding with current solution!')
-                self.current_solution = self.action_handler.get_solution()
+
+            if endpoint == '/submit/actions':
+                self.logger.debug('Received endpoint {}'.format(endpoint))
+                request  = self.socket.recv_string()
+                length   = len(request)
+                self.logger.debug('Received request of length {}: `{}`.'.format(length, request))
+                # need to send '>i', '>' for big endian
+                # https://docs.python.org/3/library/struct.html#byte-order-size-and-alignment
+                with self.lock:
+
+                    if length > 0:
+                        json_object = json.loads(request)
+                        version     = json_object['version'] if 'version' in json_object else '0'
+                        actions     = Action.from_json_array(json.dumps(json_object['actions']))
+                        self.logger.debug("Actions as json object: %s", json_object)
+                        self.logger.debug("Handling actions: %s", actions)
+                        self.action_handler.submit_actions(version, actions)
+                        # solution, self.graph, self.costs = self.action_handler.get_solution(self.graph, self.costs, actions, self.current_solution)
+                    # print('sending message!')
+                    self.socket.send(struct.pack('>i', length))
+                    self.logger.debug('Responding with current solution!')
+                    self.current_solution = self.action_handler.get_solution()
+                    self.socket.send(self._solution_to_message())
+
+            elif endpoint == '/request/solution':
                 self.socket.send(self._solution_to_message())
                 # print('sent message!')
 
