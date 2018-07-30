@@ -386,7 +386,7 @@ class SolverServer(object):
 
                 if length > 0:
                     json_object = json.loads(request)
-                    version     = json_object['version']
+                    version     = json_object['version'] if 'version' in json_object else '0'
                     actions     = Action.from_json_array(json.dumps(json_object['actions']))
                     self.logger.debug("Actions as json object: %s", json_object)
                     self.logger.debug("Handling actions: %s", actions)
