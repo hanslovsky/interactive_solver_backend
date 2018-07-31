@@ -413,11 +413,13 @@ class SolverServer(object):
                         self.logger.debug("Handling actions: %s", actions)
                         self.action_handler.submit_actions(version, actions)
                         # solution, self.graph, self.costs = self.action_handler.get_solution(self.graph, self.costs, actions, self.current_solution)
-                    # print('sending message!')
-                    self.socket.send(struct.pack('>i', length))
-                    self.logger.debug('Responding with current solution!')
-                    self.current_solution = self.action_handler.get_solution()
-                    self.publisher_socket.send(self._solution_to_message())
+                        # print('sending message!')
+                        self.socket.send(struct.pack('>i', len(actions)))
+                        self.logger.debug('Responding with current solution!')
+                        self.current_solution = self.action_handler.get_solution()
+                        self.publisher_socket.send(self._solution_to_message())
+                    else:
+                        self.socket.send(struct.pack('>i', -1))
 
             elif endpoint == '/request/solution':
                 self.logger.debug('Sending current solution')

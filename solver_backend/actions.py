@@ -53,7 +53,7 @@ class Action(object):
 
 class Detach(Action):
 
-    identifier = 'separate'
+    identifier = 'DETACH'
 
     def __init__(self, fragment_id, *detach_from):
         super(Detach, self).__init__(Detach.identifier)
@@ -62,16 +62,19 @@ class Detach(Action):
 
     def data(self):
         return {
-            'fragment' : self.fragment_id,
-            'from'     : self.detach_from
+            'fragmentId' : self.fragment_id,
+            'fragmentFrom'     : self.detach_from
             }
 
     def from_data(data):
-        return Detach(data['fragment'], *data['from'])
+        return Detach(data['fragmentId'], data['fragmentFrom'])
+
+    def __str__(self):
+        return "[Detach: {} from {}".format(self.fragment_id, self.detach_from)
 
 class Merge(Action):
 
-    identifier = 'merge'
+    identifier = 'MERGE'
 
     def __init__(self, *ids):
         super(Merge, self).__init__(Merge.identifier)
@@ -79,11 +82,13 @@ class Merge(Action):
 
     def data(self):
         return {
-            'fragments' : self.ids
+            'fromFragmentId' : self.ids[0],
+            'intoFramgentId' : self.ids[1],
+            'segmentId'      : -1
             }
 
     def from_data(data):
-        return Merge(*data['fragments'])
+        return Merge(data['fromFragmentId'], data['intoFragmentId'])
 
 
 class MergeAndDetach(Action):
