@@ -303,17 +303,19 @@ class TrainRandomForestFromAction(ActionHandler):
 
 class SolverServer(object):
 
-    def __init__(self, address, solution_address, solution_publisher_address, action_handler):
+    def __init__(self, address, solution_publisher_address, action_handler):
 
         super(SolverServer, self).__init__()
 
         self.logger = logging.getLogger('{}.{}'.format(self.__module__, type(self).__name__))
         self.logger.debug('Instantiating server!')
 
-        self.address        = address
-        self.context        = None
-        self.socket         = None
-        self.server_thread  = None
+        self.address           = address
+        self.context           = None
+        self.socket            = None
+        self.server_thread     = None
+        self.publisher_socket  = None
+        self.publisher_address = solution_publisher_address
 
         self.current_solution = action_handler.get_solution()
         self.action_handler   = action_handler
@@ -329,18 +331,24 @@ class SolverServer(object):
 
     def start(self, ioThreads=1, timeout=10):
 
-
         self.logger.debug('Starting server!')
         with self.lock:
             if not self.is_running():
-                self.interrupted   = False
-                self.context       = zmq.Context.instance(ioThreads)
-                self.socket        = self.context.socket(zmq.REP)
-                self.socket.bind(self.address)
+                self.interrupted     = False
+                self.context         = zmq.Context.instance(ioThreads)
+                self.socket          = self.context.socket(zmq.REP)
+                # self.socket.setsockopt(zmq.RCVTIMEO, 1000)
+                # self.socket.RCVTIMEO = 1000
+                # TODO: pass RCVTIMEO as a parameter
+                bound = self.socket.bind(self.address)
+
+                self.publisher_socket = self.context.socket(zmq.PUB)
+                # self.publisher_socket.bind(self.publisher_address)
 
                 target             = lambda : self._solve(timeout)
                 self.server_thread = threading.Thread(target=target)
                 self.server_thread.start()
+
         self.logger.debug('Started server!')
 
     def stop(self):
@@ -359,10 +367,12 @@ class SolverServer(object):
                 self.condition_object.set()
                 self.server_thread.join()
                 self.socket.close()
+                self.publisher_socket.close()
 
-                self.socket        = None
-                self.context       = None
-                self.server_thread = None
+                self.socket           = None
+                self.context          = None
+                self.server_thread    = None
+                self.publisher_socket = None
 
     def _solution_to_message(self):
         # print('translatingsolutino to message', self.current_solution, self.current_solution.shape)
@@ -380,9 +390,13 @@ class SolverServer(object):
         while self.is_running():
             self.logger.debug('Waiting for request at {}'.format(self.address))
             endpoint = self.socket.recv_string()
+            self.logger.debug('Got endpoint %s', endpoint)
 
 
-            if endpoint == '/submit/actions':
+            if endpoint is None:
+                continue
+
+            elif endpoint == '/submit/actions':
                 self.logger.debug('Received endpoint {}'.format(endpoint))
                 request  = self.socket.recv_string()
                 length   = len(request)
@@ -403,9 +417,10 @@ class SolverServer(object):
                     self.socket.send(struct.pack('>i', length))
                     self.logger.debug('Responding with current solution!')
                     self.current_solution = self.action_handler.get_solution()
-                    self.socket.send(self._solution_to_message())
+                    self.publisher_socket.send(self._solution_to_message())
 
             elif endpoint == '/request/solution':
+                self.logger.debug('Sending current solution')
                 self.socket.send(self._solution_to_message())
                 # print('sent message!')
 

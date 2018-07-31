@@ -47,13 +47,14 @@ if __name__ == "__main__":
     default_level = 'INFO'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--graph'          , '-g', default='/data/hanslovskyp/constantin-example-data/data/mc-graph.npy')
-    parser.add_argument('--costs'          , '-c', default='/data/hanslovskyp/constantin-example-data/data/mc-costs.npy')
-    parser.add_argument('--weights'        , '-w', default='/data/hanslovskyp/constantin-example-data/data/edge-weights.npy')
-    parser.add_argument('--features'       , '-f', default='/data/hanslovskyp/constantin-example-data/data/edge-features.npy')
-    parser.add_argument('--address'        , '-a', default='ipc:///tmp/mc-solver')
-    parser.add_argument('--logging-config' , '-l', default='/home/hanslovskyp/workspace/bigcat-future/interactive_solver_backend/logger.yaml')
-    parser.add_argument('--data-version'   , '-d', default='1')
+    parser.add_argument('--graph'                     , '-g', default='/data/hanslovskyp/constantin-example-data/data/mc-graph.npy')
+    parser.add_argument('--costs'                     , '-c', default='/data/hanslovskyp/constantin-example-data/data/mc-costs.npy')
+    parser.add_argument('--weights'                   , '-w', default='/data/hanslovskyp/constantin-example-data/data/edge-weights.npy')
+    parser.add_argument('--features'                  , '-f', default='/data/hanslovskyp/constantin-example-data/data/edge-features.npy')
+    parser.add_argument('--address'                   , '-a', default='ipc:///tmp/mc-solver')
+    parser.add_argument('--solution-publisher-address', '-s', default='ipc:///tmp/current-solution')
+    parser.add_argument('--logging-config'            , '-l', default='/home/hanslovskyp/workspace/bigcat-future/interactive_solver_backend/logger.yaml')
+    parser.add_argument('--data-version'              , '-d', default='1')
 
     args    = parser.parse_args()
     costs   = np.load(args.costs, allow_pickle=False)
@@ -87,7 +88,7 @@ if __name__ == "__main__":
         versioned_graph_store=DummyVersionedGraphStore(graph, edge_features, weights),
         version='1'
         )
-    server         = solver_backend.SolverServer(address, action_handler=action_handler)
+    server         = solver_backend.SolverServer(address, args.solution_publisher_address, action_handler=action_handler)
     server.start()
 
     def handle_signal_interrupt(signal, frame):
