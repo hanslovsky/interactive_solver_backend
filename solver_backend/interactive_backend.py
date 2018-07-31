@@ -417,6 +417,7 @@ class SolverServer(object):
                         self.socket.send(struct.pack('>i', len(actions)))
                         self.logger.debug('Responding with current solution!')
                         self.current_solution = self.action_handler.get_solution()
+                        self.publisher_socket.send_string('solution', flags=zmq.SNDMORE)
                         self.publisher_socket.send(self._solution_to_message())
                     else:
                         self.socket.send(struct.pack('>i', -1))
