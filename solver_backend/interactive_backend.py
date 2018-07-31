@@ -343,7 +343,7 @@ class SolverServer(object):
                 bound = self.socket.bind(self.address)
 
                 self.publisher_socket = self.context.socket(zmq.PUB)
-                # self.publisher_socket.bind(self.publisher_address)
+                self.publisher_socket.bind(self.publisher_address)
 
                 target             = lambda : self._solve(timeout)
                 self.server_thread = threading.Thread(target=target)
